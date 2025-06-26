@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Zigzag Recoil Bulb</title>
+  <style>
+    body {
+      margin: 0;
+      background: #e0e0e0;
+      height: 100vh;
+      overflow: hidden;
+      font-family: sans-serif;
+      transition: background 0.5s;
+      position: relative;
+    }
+
+    .on {
+      background: #fffcb2;
+    }
+
+    .bulb {
+      width: 100px;
+      height: 160px;
+      background-image: url("https://i.postimg.cc/KjK1wL3c/bulb-off.png");
+      background-size: cover;
+      position: absolute;
+      top: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      transition: all 0.4s ease;
+      z-index: 2;
+    }
+
+    .on .bulb {
+      background-image: url("https://i.postimg.cc/6QyTynzr/bulb-on.png");
+      box-shadow: 0 0 30px 10px rgba(255, 255, 150, 0.6);
+    }
+
+    svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .handle {
+      cursor: grab;
+      fill: #ccc;
+      stroke: #999;
+      stroke-width: 1px;
+      pointer-events: all;
+    }
+
+    @keyframes bounce {
+      0%   { transform: translateY(0); }
+      30%  { transform: translateY(-30px); }
+      50%  { transform: translateY(10px); }
+      70%  { transform: translateY(-15px); }
+      100% { transform: translateY(0); }
+    }
+
+    .bounce {
+      animation: bounce 0.6s ease;
+    }
+  </style>
+</head>
+<body>
+
+<div class="bulb" id="bulb"></div>
+
+<svg id="svgCanvas">
+  <path id="stringPath" stroke="#666" stroke-width="4" fill="none"/>
+  <circle id="handle" class="handle" r="10" cx="0" cy="0"/>
+</svg>
+
+<script>
+  const handle = document.getElementById('handle');
+  const path = document.getElementById('stringPath');
+  const bulb = document.getElementById('bulb');
+  const body = document.body;
+
+  const bulbX = window.innerWidth / 2;
+  const bulbY = 50 + 160; // top + bulb height
+
+  let dragging = false;
+  let toggleCount = 0;
+  const toggleDistance = 300;
+
+  let currentX = bulbX;
+  let currentY = bulbY + 200;
+
+  function drawZigzag(cx, cy, segments = 10, amplitude = 10) {
+    const dx = cx - bulbX;
+    const dy = cy - bulbY;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const step = length / segments;
+    let pathData = `M${bulbX},${bulbY}`;
+
+    for (let i = 1; i <= segments; i++) {
+      const t = i / segments;
+      const x = bulbX + dx * t + (i % 2 === 0 ? -amplitude : amplitude);
+      const y = bulbY + dy * t;
+      pathData += ` L${x},${y}`;
+    }
+
+    return pathData;
+  }
+
+  function updatePath(cx, cy, zigzag = false) {
+    const pathData = zigzag
+      ? drawZigzag(cx, cy)
+      : `M${bulbX},${bulbY} Q${bulbX},${(bulbY + cy) / 2} ${cx},${cy}`;
+    path.setAttribute('d', pathData);
+    handle.setAttribute('cx', cx);
+    handle.setAttribute('cy', cy);
+  }
+
+  updatePath(currentX, currentY);
+
+  handle.addEventListener('mousedown', () => dragging = true);
+
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+
+    const dy = currentY - bulbY;
+    if (dy > toggleDistance) {
+      toggleCount++;
+      body.classList.toggle("on", toggleCount % 2 === 1);
+    }
+
+    // Trigger zigzag recoil
+    updatePath(currentX, currentY, true);
+
+    // Animate handle
+    handle.classList.add("bounce");
+
+    setTimeout(() => {
+      // Smoothly return to original curve and position
+      currentX = bulbX;
+      currentY = bulbY + 200;
+      updatePath(currentX, currentY);
+      handle.classList.remove("bounce");
+    }, 400);
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    currentX = e.clientX;
+    currentY = e.clientY;
+    updatePath(currentX, currentY);
+  });
+</script>
+
+</body>
+</html>
